@@ -1,0 +1,126 @@
+---
+title: "Within 30 mins drive of an NHS Grampian vaccanation centre - hover over the map to highlight for a particular centre"
+format: dashboard
+embed-resources: true
+warnings: false
+output: false
+echo: false
+
+---
+```{r}
+library(leaflet)
+library(tidyverse)
+library(openrouteservice)
+library(sf)
+```
+
+
+```{r}
+#| eval: false
+
+
+token <- ors_api_key()
+
+vac_centre <- tibble(long = c(-3.294227942328914, 
+                              -2.3999364,
+                              -2.7898950022069937,
+                              -2.489102887106768,
+                              -2.0041523730132593,
+                              -1.7938984852095754,
+                              -2.4932662926047877,
+                              -2.2129182595198897,
+                              -2.148863884657826,
+                              -2.09930086283038,
+                              -2.1012720865066297),
+                     lat = c(57.637384743543706,
+                             57.286958754513144,
+                             57.44299913257793,
+                             57.66534359042955,
+                             57.69090109021246,
+                             57.51523558968804,
+                             57.054407030602185,
+                             56.961669960237046,
+                             57.1319907469126,
+                             57.14929000193321,
+                             57.18117989412246)
+)
+ 
+ place <-  c("Moray Vaccination Centre. Elgin",
+              "Garioch Vaccination Centre, Inverurie",
+              "Huntly Vaccination Centre, Huntly",
+              "MacDuff Vaccination Centre, Macduff",
+              "Fraserburgh Vaccination Centre, Fraserburgh",
+              "Peterhead Vaccination Centre, Peterhead",
+              "Scolty Day Centre, Banchory",
+              "Stonehaven Vaccination Centre, Banchory",
+              "Airyhall Vaccination Centre, Aberdeen",
+              "Aberdeen City Vaccination Centre, Aberdeen",
+              "Bridge of Don Vaccination Centre, Aberdeen"
+             )
+                 
+ place2 <-  c("30 mins drive from Moray Vaccination Centre",
+              "30 mins drive from Garioch Vaccination Centre",
+              "30 mins drive from Huntly Vaccination Centre",
+              "30 mins drive from MacDuff Vaccination Centre",
+              "30 mins drive from Fraserburgh Vaccination Centre",
+              "30 mins drive from Peterhead Vaccination Centre",
+              "30 mins drive from Scolty Day Centre",
+              "30 mins drive from Stonehaven Vaccination Centre",
+              "30 mins drive from Airyhall Vaccination Centre",
+              "30 mins drive from Aberdeen City Vaccination Centre",
+              "30 mins drive from Bridge of Don Vaccination Centre"
+             )                    
+                     
+                     
+drivetime1 <-ors_isochrones(
+  location = vac_centre[1:5,],
+  range = 1800,
+  output = "sf",
+  api_key = token
+  )
+
+drivetime2 <-ors_isochrones(
+  location = vac_centre[6:10,],
+  range = 1800,
+  output = "sf",
+  api_key = token
+  )
+
+drivetime3 <-ors_isochrones(
+  location = vac_centre[11,],
+  range = 1800,
+  output = "sf",
+  api_key = token
+  )
+
+drivetime <- bind_rows(drivetime1, drivetime2, drivetime3)
+
+boundary <- st_read("SG_NHS_HealthBoards_2019/SG_NHS_HealthBoards_2019.shp") %>%
+  filter(HBName == "Grampian") %>%
+st_transform(4326)  
+
+plot <- leaflet(vac_centre) %>%
+  addTiles() %>%
+  setView(lng = -2.7898950022069937, lat = 57.25, zoom = 9) %>%
+  addMarkers(lng= ~long, lat= ~lat, label = place ) %>%
+ addPolygons(data = drivetime,
+              color = "#444444", weight = 1, smoothFactor = 1,
+    opacity =  0.3, fillOpacity = 0.3, label = place2,
+    highlightOptions = highlightOptions(
+    weight = 3,
+    color = "red",
+    fillOpacity = 0.3,
+    bringToFront = TRUE)) %>%
+ addPolylines(data = boundary)  
+
+saveRDS(plot, "plot.RDS")
+
+```
+
+## Row {height=100%}
+
+```{r}
+#| output: true
+readRDS("plot.RDS")
+```
+
